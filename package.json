@@ -1,0 +1,31 @@
+{
+  "name": "ai-proposal-generator",
+  "version": "1.0.0",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "npx trigger.dev@latest dev",
+    "deploy": "npx trigger.dev@latest deploy",
+    "test:extractor": "npx ts-node src/scripts/test-extractor.ts",
+    "test:generator": "npx ts-node src/scripts/test-generator.ts",
+    "test:docx": "npx ts-node src/scripts/test-docx.ts",
+    "test:drive": "npx ts-node src/scripts/test-drive.ts",
+    "test:mailer": "npx ts-node src/scripts/test-mailer.ts",
+    "setup:gmail-token": "npx ts-node src/scripts/get-gmail-token.ts",
+    "start:webhook": "npx ts-node src/server/webhook-receiver.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.54.0",
+    "@trigger.dev/sdk": "4.4.6",
+    "docx": "^8.5.0",
+    "googleapis": "^144.0.0",
+    "nodemailer": "^6.9.0"
+  },
+  "devDependencies": {
+    "@trigger.dev/build": "4.4.6",
+    "@types/node": "^20.0.0",
+    "@types/nodemailer": "^6.4.0",
+    "dotenv": "^16.4.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.4.0"
+  }
+}
