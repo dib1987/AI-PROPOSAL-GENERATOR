@@ -2,14 +2,49 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { LeadData, ProposalDocument, ProposalSections } from "../types";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const MODEL = process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-6";
 
 const SYSTEM_PROMPT = `You are a senior proposal writer at a QA and test automation consulting firm specializing in enterprise test frameworks, automation scripts, and quality engineering.
 Your proposals are professional, specific, and persuasive — every section must be grounded in the client's actual stated requirement, not generic filler.
 Write each section in plain business English. No jargon, no vague statements.
-Where the client has mentioned specific technologies, frameworks, or systems (e.g., POM, TestNG, Blackbird, SAP, Selenium), reference them directly in the relevant sections.
-Return ONLY a valid JSON object — no markdown, no explanation, no surrounding text.`;
+Where the client has mentioned specific technologies, frameworks, or systems (e.g., POM, TestNG, Blackbird, SAP, Selenium), reference them directly in the relevant sections.`;
 
-function buildUserPrompt(lead: LeadData): string {
+// Tool definition — schema enforced at the API level.
+// Claude is forced to call this tool (tool_choice: forced), so it cannot
+// return prose or deviate from the structure. No JSON.parse needed.
+const PROPOSAL_TOOL: Anthropic.Tool = {
+  name: "submit_proposal",
+  description: "Submit the completed proposal with all 10 required sections.",
+  input_schema: {
+    type: "object" as const,
+    properties: {
+      executiveSummary:          { type: "string", description: "2–3 paragraph opening addressed to the prospect" },
+      requirementsUnderstanding: { type: "string", description: "Structured breakdown of the client's exact requirement" },
+      proposedSolution:          { type: "string", description: "Concrete solution aligned to the client's stated need" },
+      projectTimeline:           { type: "string", description: "Phased timeline fitting within the client's stated deadline" },
+      teamAndResources:          { type: "string", description: "Team composition with billing rates and total cost" },
+      investmentPricing:         { type: "string", description: "Clear pricing table with payment terms" },
+      whyUs:                     { type: "string", description: "3–4 specific reasons tailored to this client's industry" },
+      deliverables:              { type: "string", description: "Numbered list of tangible deliverables" },
+      nextSteps:                 { type: "string", description: "4–5 action-oriented next steps for both parties" },
+      termsAndConditions:        { type: "string", description: "Proposal validity, payment, IP ownership, confidentiality" },
+    },
+    required: [
+      "executiveSummary",
+      "requirementsUnderstanding",
+      "proposedSolution",
+      "projectTimeline",
+      "teamAndResources",
+      "investmentPricing",
+      "whyUs",
+      "deliverables",
+      "nextSteps",
+      "termsAndConditions",
+    ],
+  },
+};
+
+function buildUserPrompt(lead: LeadData, critiqueFeedback?: string): string {
   const today = new Date().toISOString().split("T")[0];
   const validUntil = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
     .toISOString()
@@ -52,32 +87,39 @@ Proposal Date: ${today}
 Valid Until: ${validUntil}
 Prepared By: ${vendor}
 
-IMPORTANT: Every section must reflect the client's actual stated requirement. Do not write generic technology consulting content. If the client mentioned specific frameworks, tools, or systems, those must appear in requirementsUnderstanding, proposedSolution, deliverables, and teamAndResources.`;
+IMPORTANT: Every section must reflect the client's actual stated requirement. Do not write generic technology consulting content. If the client mentioned specific frameworks, tools, or systems, those must appear in requirementsUnderstanding, proposedSolution, deliverables, and teamAndResources.${
+    critiqueFeedback
+      ? `\n\nPREVIOUS ATTEMPT WAS REJECTED — REVIEWER FEEDBACK:\n${critiqueFeedback}\n\nYou MUST address every point above in this revised proposal. Do not repeat the same mistakes.`
+      : ""
+  }`;
 }
 
-export async function generateProposal(lead: LeadData): Promise<ProposalDocument> {
+export async function generateProposal(
+  lead: LeadData,
+  critiqueFeedback?: string
+): Promise<ProposalDocument> {
   const message = await anthropic.messages.create({
-    model: "claude-sonnet-4-6",
+    model: MODEL,
     max_tokens: 8000,
     system: SYSTEM_PROMPT,
-    messages: [{ role: "user", content: buildUserPrompt(lead) }],
+    tools: [PROPOSAL_TOOL],
+    // Force Claude to always call submit_proposal — it cannot respond with prose
+    tool_choice: { type: "tool", name: "submit_proposal" },
+    messages: [{ role: "user", content: buildUserPrompt(lead, critiqueFeedback) }],
   });
 
-  const raw = message.content[0].type === "text" ? message.content[0].text : "";
+  // With tool_choice forced, content[0] is always a tool_use block — no text parsing needed
+  const toolBlock = message.content.find(
+    (b): b is Anthropic.ToolUseBlock => b.type === "tool_use" && b.name === "submit_proposal"
+  );
 
-  // Strip any accidental markdown fences
-  const cleaned = raw.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
-
-  let sections: ProposalSections;
-  try {
-    sections = JSON.parse(cleaned) as ProposalSections;
-  } catch {
-    throw new Error(
-      `Claude returned malformed JSON. Raw response (first 300 chars): ${raw.slice(0, 300)}`
-    );
+  if (!toolBlock) {
+    throw new Error("Claude did not call the submit_proposal tool — unexpected response structure");
   }
 
-  // Validate all 10 keys are present
+  const sections = toolBlock.input as ProposalSections;
+
+  // Defensive: fill any missing keys rather than throwing (tool_choice makes this unlikely)
   const required: (keyof ProposalSections)[] = [
     "executiveSummary",
     "requirementsUnderstanding",

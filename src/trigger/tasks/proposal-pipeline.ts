@@ -1,6 +1,7 @@
 import { task, logger } from "@trigger.dev/sdk/v3";
 import type { LeadData, PipelineResult, StepResult } from "../types";
 import { generateProposal } from "../lib/proposal-generator";
+import { evaluateProposal } from "../lib/proposal-evaluator";
 import { buildDocx } from "../lib/docx-builder";
 import { uploadToDrive } from "../lib/drive-uploader";
 import { sendProposalEmail } from "../lib/notify-mailer";
@@ -57,6 +58,49 @@ export const proposalPipeline = task({
       logger.error("proposal-pipeline: generation error", { detail });
       steps.push({ step: "generate", status: "failed", detail });
       return { success: false, steps, error: detail };
+    }
+
+    // ── STEP 2b: Evaluate proposal quality (Haiku scorer) ────────────────────
+    logger.info("proposal-pipeline: step 2b — evaluating proposal quality");
+
+    try {
+      const evaluation = await evaluateProposal(payload, proposal.sections);
+
+      logger.info("proposal-pipeline: evaluation complete", {
+        score: evaluation.score,
+        approved: evaluation.approved,
+        critique: evaluation.critique || "none",
+      });
+
+      if (!evaluation.approved) {
+        // Score < 7 — regenerate once with the critique attached
+        logger.warn("proposal-pipeline: score below threshold, regenerating with critique", {
+          score: evaluation.score,
+          critique: evaluation.critique,
+        });
+
+        proposal = await generateProposal(payload, evaluation.critique);
+
+        steps.push({
+          step: "evaluate",
+          status: "success",
+          detail: `Initial score ${evaluation.score}/10 — regenerated with critique`,
+        });
+
+        logger.info("proposal-pipeline: regeneration complete");
+      } else {
+        steps.push({
+          step: "evaluate",
+          status: "success",
+          detail: `Score ${evaluation.score}/10 — approved`,
+        });
+      }
+    } catch (err) {
+      // Eval failure is non-fatal — proceed with the original proposal
+      logger.warn("proposal-pipeline: evaluation step failed, proceeding with original", {
+        error: (err as Error).message,
+      });
+      steps.push({ step: "evaluate", status: "failed", detail: "Eval skipped — proceeding with original" });
     }
 
     // ── STEP 3: Build .docx ───────────────────────────────────────────────────

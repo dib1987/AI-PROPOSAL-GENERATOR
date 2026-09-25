@@ -1,0 +1,25 @@
+{
+  "hooks": {
+    "PreToolCall": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -File .claude/hooks/protect-env.ps1"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -File .claude/hooks/log-session.ps1"
+          }
+        ]
+      }
+    ]
+  }
+}
