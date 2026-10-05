@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { logger } from "@trigger.dev/sdk/v3";
 import type { LeadData, ProposalSections } from "../types";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -56,6 +57,7 @@ Requested timeline: ${lead.timeline}
 Client team size: ${lead.teamSize}
 
 PROPOSAL SECTIONS TO REVIEW:
+(Section keys defined in proposal-schema.ts — only a subset is evaluated here for cost efficiency)
 
 Executive Summary:
 ${sections.executiveSummary}
@@ -85,12 +87,20 @@ export async function evaluateProposal(
   let message: Anthropic.Message;
 
   try {
+    const t0 = Date.now();
     message = await anthropic.messages.create({
       model: EVAL_MODEL,
       max_tokens: 1024,
       tools: [EVAL_TOOL],
       tool_choice: { type: "tool", name: "submit_evaluation" },
       messages: [{ role: "user", content: buildEvalPrompt(lead, sections) }],
+    });
+    const { input_tokens, output_tokens } = message.usage;
+    logger.info("proposal-evaluator", {
+      durationMs: Date.now() - t0,
+      input_tokens,
+      output_tokens,
+      estimatedUsd: (input_tokens * 0.8 + output_tokens * 4) / 1_000_000,
     });
   } catch {
     // Eval API failure is non-blocking — pass the proposal through rather than killing the pipeline

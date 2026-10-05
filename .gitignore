@@ -24,3 +24,10 @@ Thumbs.db
 # Editor
 .vscode/
 .idea/
+
+# Test artifacts
+test-output-proposal.docx
+
+# Claude Code internals
+.claude/session-log.txt
+.codex/

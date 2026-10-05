@@ -1,7 +1,9 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { logger } from "@trigger.dev/sdk/v3";
 import type { RawEmailLead, LeadData } from "../types";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const MODEL = process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-6";
 
 interface ExtractedFields {
   prospectName: string;
@@ -42,11 +44,19 @@ export async function extractLeadFromEmail(rawEmail: RawEmailLead): Promise<Lead
   let extracted: ExtractedFields;
 
   try {
+    const t0 = Date.now();
     const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-6",
+      model: MODEL,
       max_tokens: 512,
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content: USER_PROMPT_TEMPLATE(emailText) }],
+    });
+    const { input_tokens, output_tokens } = message.usage;
+    logger.info("email-extractor", {
+      durationMs: Date.now() - t0,
+      input_tokens,
+      output_tokens,
+      estimatedUsd: (input_tokens * 3 + output_tokens * 15) / 1_000_000,
     });
 
     const raw = message.content[0].type === "text" ? message.content[0].text : "";

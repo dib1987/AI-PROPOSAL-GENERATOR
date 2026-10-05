@@ -11,6 +11,7 @@ export interface LeadData {
   managerEmail: string;
 }
 
+// Runtime key list lives in proposal-schema.ts — keep these in sync if sections change.
 export interface ProposalSections {
   executiveSummary: string;
   requirementsUnderstanding: string;

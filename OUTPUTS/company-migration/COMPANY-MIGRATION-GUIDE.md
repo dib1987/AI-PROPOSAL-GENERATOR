@@ -1,8 +1,8 @@
 # AI Proposal Generator — Company Laptop Migration Guide
 
-**Project:** AI Proposal Generator (Trigger.dev + Claude + Google Drive)  
-**Author:** Dibyendu Mondal  
-**Purpose:** Move working local build to company laptop and run a live demo  
+**Project:** AI Proposal Generator (Trigger.dev + Claude + Google Drive)
+**Author:** Dibyendu Mondal
+**Purpose:** Move working local build to company laptop and run a live demo
 **Date:** 2026-08-12
 
 ---
@@ -11,13 +11,13 @@
 
 The pipeline has 5 external dependencies. Each one needs credentials or access to work:
 
-| Dependency | What it does | Where credentials live |
-|---|---|---|
-| Anthropic API | Claude generates the proposal | `.env` → `ANTHROPIC_API_KEY` |
-| Google OAuth2 | Gmail polling + Drive upload | `.env` → OAuth tokens |
-| Gmail SMTP | Sends the proposal email | `.env` → App Password |
-| Google Drive | Stores the `.docx` file | `.env` → `GOOGLE_DRIVE_FOLDER_ID` |
-| Trigger.dev | Runs background tasks locally | `.env` → `TRIGGER_SECRET_KEY` |
+| Dependency    | What it does                  | Where credentials live                 |
+| ------------- | ----------------------------- | -------------------------------------- |
+| Anthropic API | Claude generates the proposal | `.env` → `ANTHROPIC_API_KEY`      |
+| Google OAuth2 | Gmail polling + Drive upload  | `.env` → OAuth tokens               |
+| Gmail SMTP    | Sends the proposal email      | `.env` → App Password               |
+| Google Drive  | Stores the`.docx` file      | `.env` → `GOOGLE_DRIVE_FOLDER_ID` |
+| Trigger.dev   | Runs background tasks locally | `.env` → `TRIGGER_SECRET_KEY`     |
 
 You do not need cloud deployment for the demo. `npm run dev` runs everything locally.
 
@@ -36,6 +36,7 @@ git --version    # Any version is fine
 ```
 
 **If Node.js is missing or below v18:**
+
 - Download from https://nodejs.org (LTS version)
 - If you cannot install globally (IT restriction): use `nvm-windows`
   - https://github.com/coreybutler/nvm-windows/releases
@@ -43,6 +44,7 @@ git --version    # Any version is fine
   - No admin rights required for nvm-windows
 
 **If Git is missing:**
+
 - Request from IT or download from https://git-scm.com/download/win
 
 ---
@@ -76,6 +78,7 @@ Raise these with IT **before** migration day. Some may take 1-2 business days.
 ```
 
 **How to phrase the IT request:**
+
 > "I need outbound HTTPS access to api.anthropic.com, googleapis.com, accounts.google.com, and cloud.trigger.dev on port 443, and SMTP access on port 587 to smtp.gmail.com. This is for a local development tool — no inbound ports needed."
 
 ---
@@ -117,12 +120,12 @@ Gmail requires an App Password for SMTP (not your regular password):
 
 Use one of these methods to move your `.env` values to the company laptop:
 
-| Method | How | Risk |
-|---|---|---|
-| Encrypted USB | Copy `.env` to USB, unlock on company laptop | Low — physical transfer |
-| 1Password / Bitwarden | Store each value as a secure note, retrieve on company laptop | Low — encrypted vault |
-| Company-approved secret manager | AWS Secrets Manager, Azure Key Vault if IT provides | Low — enterprise grade |
-| Manual re-entry | Type each value fresh on company laptop | Zero transfer risk — tedious but safest |
+| Method                          | How                                                           | Risk                                     |
+| ------------------------------- | ------------------------------------------------------------- | ---------------------------------------- |
+| Encrypted USB                   | Copy`.env` to USB, unlock on company laptop                 | Low — physical transfer                 |
+| 1Password / Bitwarden           | Store each value as a secure note, retrieve on company laptop | Low — encrypted vault                   |
+| Company-approved secret manager | AWS Secrets Manager, Azure Key Vault if IT provides           | Low — enterprise grade                  |
+| Manual re-entry                 | Type each value fresh on company laptop                       | Zero transfer risk — tedious but safest |
 
 **Do not use:** email, Teams/Slack DMs, OneDrive plaintext files, or GitHub (even private repos).
 
@@ -207,6 +210,7 @@ npm run setup:gmail-token
 ```
 
 This will:
+
 1. Open a browser window
 2. Ask you to log in with the Gmail account used for polling/Drive
 3. Ask you to approve the permissions
@@ -245,14 +249,14 @@ npm run test:mailer
 
 **If any test fails:** check the error message against the troubleshooting table below before continuing.
 
-| Error | Likely Cause | Fix |
-|---|---|---|
-| `401 Unauthorized` on Anthropic | Wrong or missing API key | Check `ANTHROPIC_API_KEY` in `.env` |
-| `invalid_grant` on Google | Stale refresh token | Re-run `npm run setup:gmail-token` |
-| `ECONNREFUSED` or timeout | Network/firewall blocking the endpoint | Raise with IT (see Part 1B) |
-| `ENOENT .env` | Missing `.env` file | Create it at project root |
-| `Cannot find module` | `npm install` not run | Run `npm install` |
-| Drive upload `403` | OAuth scope missing | Re-run token setup, approve Drive scope |
+| Error                             | Likely Cause                           | Fix                                     |
+| --------------------------------- | -------------------------------------- | --------------------------------------- |
+| `401 Unauthorized` on Anthropic | Wrong or missing API key               | Check`ANTHROPIC_API_KEY` in `.env`  |
+| `invalid_grant` on Google       | Stale refresh token                    | Re-run`npm run setup:gmail-token`     |
+| `ECONNREFUSED` or timeout       | Network/firewall blocking the endpoint | Raise with IT (see Part 1B)             |
+| `ENOENT .env`                   | Missing`.env` file                   | Create it at project root               |
+| `Cannot find module`            | `npm install` not run                | Run`npm install`                      |
+| Drive upload`403`               | OAuth scope missing                    | Re-run token setup, approve Drive scope |
 
 ---
 
@@ -265,6 +269,7 @@ npm run dev
 ```
 
 You will see:
+
 ```
 Trigger.dev v3 — local dev worker running
 Registered tasks: typeform-webhook, gmail-poller, proposal-pipeline
@@ -303,14 +308,14 @@ Open `test-output-proposal.docx` from the project root.
 
 ### What to Show During the Demo (Talking Points)
 
-| Step | What you show | What you say |
-|---|---|---|
-| 1 | Input (Typeform or email) | "The pipeline starts the moment a lead comes in — no manual handoff." |
-| 2 | Terminal logs — Claude extracting data | "Claude reads the raw input and structures it into a standard lead format." |
-| 3 | Terminal logs — proposal being generated | "Claude then generates a 10-section proposal — scoped, priced, and professional." |
-| 4 | Open the `.docx` | "This is the output. Ready to send in under a minute." |
-| 5 | Google Drive folder | "It's automatically uploaded and shared. No manual saving." |
-| 6 | Email inbox | "The manager gets notified immediately with the file attached." |
+| Step | What you show                             | What you say                                                                       |
+| ---- | ----------------------------------------- | ---------------------------------------------------------------------------------- |
+| 1    | Input (Typeform or email)                 | "The pipeline starts the moment a lead comes in — no manual handoff."             |
+| 2    | Terminal logs — Claude extracting data   | "Claude reads the raw input and structures it into a standard lead format."        |
+| 3    | Terminal logs — proposal being generated | "Claude then generates a 10-section proposal — scoped, priced, and professional." |
+| 4    | Open the`.docx`                         | "This is the output. Ready to send in under a minute."                             |
+| 5    | Google Drive folder                       | "It's automatically uploaded and shared. No manual saving."                        |
+| 6    | Email inbox                               | "The manager gets notified immediately with the file attached."                    |
 
 ---
 
@@ -318,12 +323,12 @@ Open `test-output-proposal.docx` from the project root.
 
 Trigger.dev works perfectly for the demo. For production at Cognizant, the equivalent options:
 
-| If Cognizant uses | Replace Trigger.dev with | Effort |
-|---|---|---|
-| AWS | SQS + Lambda, or Step Functions | Medium |
-| Azure | Service Bus + Azure Functions | Medium |
-| On-prem / VPN-only | Bull/BullMQ + Redis (self-hosted) | Low |
-| No infra preference | Keep Trigger.dev cloud (cheapest to start) | None |
+| If Cognizant uses   | Replace Trigger.dev with                   | Effort |
+| ------------------- | ------------------------------------------ | ------ |
+| AWS                 | SQS + Lambda, or Step Functions            | Medium |
+| Azure               | Service Bus + Azure Functions              | Medium |
+| On-prem / VPN-only  | Bull/BullMQ + Redis (self-hosted)          | Low    |
+| No infra preference | Keep Trigger.dev cloud (cheapest to start) | None   |
 
 The pipeline logic (`proposal-pipeline.ts`) does not change — only the task wrapper changes.
 
@@ -331,17 +336,17 @@ The pipeline logic (`proposal-pipeline.ts`) does not change — only the task wr
 
 ## Quick Reference — Key Files
 
-| File | What it does |
-|---|---|
+| File                                       | What it does                                                          |
+| ------------------------------------------ | --------------------------------------------------------------------- |
 | `src/trigger/tasks/proposal-pipeline.ts` | Core pipeline — Claude extract → generate → docx → Drive → email |
-| `src/trigger/lib/email-extractor.ts` | Claude parses raw email into `LeadData` |
-| `src/trigger/lib/proposal-generator.ts` | Claude generates 10-section proposal JSON |
-| `src/trigger/lib/docx-builder.ts` | Builds `.docx` from proposal data |
-| `src/trigger/lib/drive-uploader.ts` | Uploads to Google Drive via OAuth2 |
-| `src/trigger/lib/notify-mailer.ts` | Sends email with `.docx` via Nodemailer |
-| `src/trigger/types.ts` | All shared TypeScript interfaces |
-| `.env` | All credentials — never commit this |
-| `trigger.config.ts` | Task registration, retry config, project ID |
+| `src/trigger/lib/email-extractor.ts`     | Claude parses raw email into`LeadData`                              |
+| `src/trigger/lib/proposal-generator.ts`  | Claude generates 10-section proposal JSON                             |
+| `src/trigger/lib/docx-builder.ts`        | Builds`.docx` from proposal data                                    |
+| `src/trigger/lib/drive-uploader.ts`      | Uploads to Google Drive via OAuth2                                    |
+| `src/trigger/lib/notify-mailer.ts`       | Sends email with`.docx` via Nodemailer                              |
+| `src/trigger/types.ts`                   | All shared TypeScript interfaces                                      |
+| `.env`                                   | All credentials — never commit this                                  |
+| `trigger.config.ts`                      | Task registration, retry config, project ID                           |
 
 ---
 

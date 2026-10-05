@@ -1,5 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { logger } from "@trigger.dev/sdk/v3";
 import type { LeadData, ProposalDocument, ProposalSections } from "../types";
+import { PROPOSAL_SECTION_KEYS } from "./proposal-schema";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const MODEL = process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-6";
@@ -29,18 +31,7 @@ const PROPOSAL_TOOL: Anthropic.Tool = {
       nextSteps:                 { type: "string", description: "4–5 action-oriented next steps for both parties" },
       termsAndConditions:        { type: "string", description: "Proposal validity, payment, IP ownership, confidentiality" },
     },
-    required: [
-      "executiveSummary",
-      "requirementsUnderstanding",
-      "proposedSolution",
-      "projectTimeline",
-      "teamAndResources",
-      "investmentPricing",
-      "whyUs",
-      "deliverables",
-      "nextSteps",
-      "termsAndConditions",
-    ],
+    required: [...PROPOSAL_SECTION_KEYS],
   },
 };
 
@@ -98,6 +89,7 @@ export async function generateProposal(
   lead: LeadData,
   critiqueFeedback?: string
 ): Promise<ProposalDocument> {
+  const t0 = Date.now();
   const message = await anthropic.messages.create({
     model: MODEL,
     max_tokens: 8000,
@@ -106,6 +98,13 @@ export async function generateProposal(
     // Force Claude to always call submit_proposal — it cannot respond with prose
     tool_choice: { type: "tool", name: "submit_proposal" },
     messages: [{ role: "user", content: buildUserPrompt(lead, critiqueFeedback) }],
+  });
+  const { input_tokens, output_tokens } = message.usage;
+  logger.info("proposal-generator", {
+    durationMs: Date.now() - t0,
+    input_tokens,
+    output_tokens,
+    estimatedUsd: (input_tokens * 3 + output_tokens * 15) / 1_000_000,
   });
 
   // With tool_choice forced, content[0] is always a tool_use block — no text parsing needed
@@ -120,20 +119,7 @@ export async function generateProposal(
   const sections = toolBlock.input as ProposalSections;
 
   // Defensive: fill any missing keys rather than throwing (tool_choice makes this unlikely)
-  const required: (keyof ProposalSections)[] = [
-    "executiveSummary",
-    "requirementsUnderstanding",
-    "proposedSolution",
-    "projectTimeline",
-    "teamAndResources",
-    "investmentPricing",
-    "whyUs",
-    "deliverables",
-    "nextSteps",
-    "termsAndConditions",
-  ];
-
-  for (const key of required) {
+  for (const key of PROPOSAL_SECTION_KEYS) {
     if (!sections[key] || typeof sections[key] !== "string") {
       sections[key] = "Content not available — please review and complete this section.";
     }
